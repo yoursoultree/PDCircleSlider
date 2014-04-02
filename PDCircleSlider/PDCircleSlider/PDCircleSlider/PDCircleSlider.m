@@ -14,7 +14,6 @@
 
 @interface PDCircleSlider ()
 {
-    BOOL _clockwise;
     CGFloat _circleRadius;
     CGPoint _currentPoint;
     
@@ -26,6 +25,9 @@
     UIColor * _bgColor_;
     UIColor * _buttonColor_;
     UIColor * _progressColor_;
+    CGFloat _progress;
+    
+    ProgressDidChangedBlock progressDidChangeBlock;
 }
 
 @end
@@ -34,30 +36,21 @@
 
 - (id)initWithFrame:(CGRect)frame progressDidChangeBlock:(ProgressDidChangedBlock)block
               start:(CGFloat)start
-          clockwise:(BOOL)clockwise
 {
     frame.size.height = frame.size.width;
     self = [super initWithFrame:frame];
     if (self) {
-        self.progressDidChangeBlock = [block copy];
-        self.progress = start;
-        _clockwise = clockwise;
+        progressDidChangeBlock = [block copy];
         _circleRadius = self.bounds.size.width / 2 - BUTTON_RADIUS;
         _isSelected = NO;
         _center = RectGetCenter(self.bounds);
         _bgColor_ = [UIColor colorWithHexString:@"EEEEEE"];
         _buttonColor_ = BLUE_COLOR;
         _progressColor_ = BLUE_COLOR;
-                    
-
+        
+        self.backgroundColor = [UIColor whiteColor];
     }
     return self;
-}
-
-- (void)layoutSubviews
-{
-    self.backgroundColor = [UIColor whiteColor];
-
 }
 
 - (void)drawRect:(CGRect)rect
@@ -69,19 +62,17 @@
     [bgPath stroke];
     
     //进度条
-    UIBezierPath * progress = [UIBezierPath bezierPathWithArcCenter:RectGetCenter(self.bounds) radius:self.bounds.size.width / 2 - BUTTON_RADIUS startAngle:ProgressToAngle(0) endAngle:ProgressToAngle(self.progress) clockwise:YES];
+    UIBezierPath * progressPath = [UIBezierPath bezierPathWithArcCenter:RectGetCenter(self.bounds) radius:self.bounds.size.width / 2 - BUTTON_RADIUS startAngle:ProgressToAngle(0) endAngle:ProgressToAngle(_progress) clockwise:YES];
     [_progressColor_ setStroke];
-    [progress setLineWidth:LINE_WIDTH];
-    [progress stroke];
+    [progressPath setLineWidth:LINE_WIDTH];
+    [progressPath stroke];
     
     //按键 与 按键位置
-    _currentPoint = progress.currentPoint;
+    _currentPoint = progressPath.currentPoint;
     _buttonRect = CGRectMake(_currentPoint.x - BUTTON_RADIUS, _currentPoint.y - BUTTON_RADIUS, BUTTON_RADIUS * 2, BUTTON_RADIUS * 2);
     UIBezierPath * button = [UIBezierPath bezierPathWithOvalInRect:_buttonRect];
     [_buttonColor_ setFill];
     [button fill];
-
-
 }
 
 - (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event
@@ -93,47 +84,26 @@
 
 - (void)touchesMoved:(NSSet *)touches withEvent:(UIEvent *)event
 {
+    if (!_isSelected) {
+        return;
+    }
     UITouch * touch = [touches anyObject];
     CGPoint nowPoint = [touch locationInView:self];
     CGFloat tempAngle = AngleBetweenPoints(RectGetCenter(self.bounds), nowPoint);
     
-    if (self.progress > 0.5 && nowPoint.y < _center.y) {
-        self.progress = nowPoint.x < _center.x ? tempAngle / 360 : 1;
+    if (_progress > 0.5 && nowPoint.y < _center.y) {
+        _progress = nowPoint.x < _center.x ? tempAngle / 360 : 1;
         
-    } else if (self.progress < 0.5 && nowPoint.y < _center.y) {
-        self.progress = nowPoint.x > _center.x ? tempAngle / 360 : 0;
+    } else if (_progress < 0.5 && nowPoint.y < _center.y) {
+        _progress = nowPoint.x > _center.x ? tempAngle / 360 : 0;
         
     } else {
-        self.progress = tempAngle / 360;
+        _progress = tempAngle / 360;
     }
     
-    self.progressDidChangeBlock(self.progress);
+    progressDidChangeBlock(_progress);
     [self setNeedsDisplay];
 }
-
-#pragma mark - setter
-
-- (void) setBgColor:(UIColor *)bgColor
-{
-    if (!CGColorEqualToColor(_bgColor_.CGColor, bgColor.CGColor)) {
-        _bgColor_ = bgColor;
-        [self setNeedsDisplay];
-    }
-}
-
-- (void) setButtonColor:(UIColor *)buttonColor
-{
-    if (!CGColorEqualToColor(_buttonColor_.CGColor, buttonColor.CGColor)) {
-        _buttonColor_ = buttonColor;
-        [self setNeedsDisplay];
-    }}
-
-- (void) setProgressColor:(UIColor *)progressColor
-{
-    if (!CGColorEqualToColor(_progressColor_.CGColor, progressColor.CGColor)) {
-        _progressColor_ = progressColor;
-        [self setNeedsDisplay];
-    }}
 
 #pragma mark - public method
 

@@ -23,8 +23,7 @@
                                                    progressDidChangeBlock:^(CGFloat progress) {
                                                        NSLog(@"%f", progress);
                                                    }
-                                                                    start:0.2
-                                                                clockwise:YES];
+                                                                    start:0.2];
     circleSlider.center = CGPointMake(160, 220);
 //    circleSlider.buttonColor = [UIColor redColor];
     [self.view addSubview:circleSlider];
